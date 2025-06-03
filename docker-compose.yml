@@ -1,0 +1,55 @@
+version: "3"
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  web:
+    build: .
+    restart: always
+    volumes:
+      - .:/app/
+    ports:
+      - 8085:8085
+    environment:
+      DATABASE_URL: postgresql://exp_admin:exp_admin_123@postgres_container:1111
+      RABBITMQ_PRODUCER: ./config/producer.json
+      RABBITMQ_CONSUMER: ./config/consumer.json
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 6000M
+    networks:
+      - app-tier
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    environment:
+      POSTGRES_USER: exp_admin
+      POSTGRES_PASSWORD: exp_admin_123
+      PGDATA: /data/postgres
+    volumes:
+       - ../shared/postgres:/data/postgres
+    ports:
+      - "1111:1111"
+    restart: unless-stopped
+    networks:
+      - app-tier
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+        - ../shared2/rabbitmq/data/:/var/lib/rabbitmq/
+    networks:
+      - app-tier
